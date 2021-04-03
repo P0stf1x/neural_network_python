@@ -1,79 +1,90 @@
-from neuron import Neuron
-import numpy as np
+from random import uniform
+from math import exp
+from typing import List
 import numba
-from numba import cuda
 
 
 class Network:
-    def __init__(self, layerStructure, learningRate=0.5, momentum=0.25):
-        self.layers = []
-        self.create(layerStructure)
-        self.bias = Neuron(value=1)  # Нейрон смещения
-        self.passNeighbors()
+    def __init__(self, shape, learningRate=0.5, momentum=0.25):
+
         self.generations = 0
         self.iterations = 0
-        self.learningRate = learningRate
         self.momentum = momentum
-        self.error = 0
+        self.learningRate = learningRate
 
-    def create(self, layerStructure):
-        for i in layerStructure:
-            temp = [Neuron() for _ in range(i)]  # Скрытые, выходной слои
-            self.layers.append(temp)
+        self.weights = self.generateWeights(shape)
+        self.shape = shape
 
-    def getValues(self):
-        temp = []
-        for i in self.layers[-1]:
-            temp.append(i.value)
-        return temp
+    @staticmethod
+    def activateInputs(inputs: List[float]) -> List[float]:
+        return list(map(Network.activate, inputs))
 
-    # @numba.njit(fastmath=True, cache=True)
-    def calculate(self, inputs):
-        for neuron in range(len(self.layers[0])):
-            self.layers[0][neuron].value = inputs[neuron]
-        for layer in range(1, len(self.layers)):
-            for neuron in self.layers[layer]:
-                neuron.activate(neuron.calculateValue())
-        return self.getValues()
-
-    def passNeighbors(self):
-        for j in range(1, len(self.layers)):
-            for i in self.layers[j]:
-                i.initNeighbors(self.layers[j - 1].__add__([self.bias]))
-
-    def getError(self, sets):
-        error = 0
-        if len(sets) > 0:
-            for i, dataset in enumerate(sets):
-                self.calculate(dataset[:len(self.layers[0])])
-                for j in range(len(self.getValues())):
-                    error += (dataset[:np.negative(len(self.layers[0])):-1][j] - self.getValues()[j]) ** 2
-            error /= len(sets)
-        return error
-
-    def iteration(self, dataset):
-        # Считаем дельту для каждого нейрона
-        self.calculate(dataset[:len(self.layers[0])])
-        for i, neuron in enumerate(self.layers[-1]):
-            pr = ((1 - neuron.value) * neuron.value)  # Производная функции активации нейрона (сигмоида)
-            neuron.delta = (dataset[:np.negative(len(self.layers[0])):-1][i] - neuron.value) * pr
-        for layerid in range(len(self.layers) - 2, 0, -1):
-            for neuronid, neuron in enumerate(self.layers[layerid]):
-                deltaSum = 0
-                for nextNeuron in self.layers[layerid + 1]:
-                    deltaSum += nextNeuron.backNeighbors[neuronid][1] * nextNeuron.delta
-                pr = ((1 - neuron.value) * neuron.value)
-                neuron.delta = pr * deltaSum
-
-        # Обновляем веса нейронов
-        for layer in self.layers[:0:-1]:
-            for neuron in layer:
-                neuron.updateWeight(self.learningRate, self.momentum)
-
-    def train(self, sets):
-        for _ in range(100):  # Для ускорения обучения проходим 100 поколений за раз
-            for dataset in sets:
-                self.iteration(dataset)
+    def train(self, dataset):
+        pass
+        self.weights: List[List[List[float]]]
+        for _ in range(1):
+            for data in dataset:
+                result = self.calculateLayers(data[0], self.weights)
+                self.weights = self.trainItteration(result, data[1], self.weights)
                 self.iterations += 1
             self.generations += 1
-        self.error = self.getError(sets)
+
+    @staticmethod
+    def trainItteration(result: List[List[float]], actual: List[float], weights):
+        # TODO: write implementation
+        pass
+
+
+    @staticmethod
+    def getError(data=-1):
+        return data
+
+    def calculate(self, inputs: List[float]):
+        """
+        Network.calculateLayers wrapper
+        """
+        return self.calculateLayers(inputs, self.weights)
+
+    @staticmethod
+    def calculateLayers(inputs: List[float], weights: List[List[List[float]]]) -> List[List[float]]:
+        outputLayers = [Network.activateInputs(inputs)]
+        for weightsLayer in weights:
+            outputLayers.append(Network.calculateSingleLayer(outputLayers[-1], weightsLayer))
+        return outputLayers
+
+    @staticmethod
+    # @numba.jit(cache=True, fastmath=True, nopython=True)
+    # sum() unsupported with numba
+    # TODO: rewrite without sum()
+    def calculateSingleLayer(inputLayer: List[float], weightsLayer: List[List[float]], bias=1.0) -> List[float]:
+        # weightsLayer: [*neuronsWeights, biasWeight]
+        inputLayer = inputLayer.copy()
+        inputLayer.append(bias)
+        return [
+            Network.activate(
+                sum(
+                    inputLayer[connection] * outputNeuron[connection]
+                    for connection in range(len(outputNeuron))
+                )
+            )
+            for outputNeuron in weightsLayer
+        ]
+
+    @staticmethod
+    @numba.jit(cache=True, nopython=True, fastmath=True)
+    def activate(value: float) -> float:
+        return 1 / (1 + exp(-value))  # Sigmoid activation
+
+    @staticmethod
+    def derivative(value: float) -> float:
+        return (1 - value) * value  # Sigmoid derivative
+
+    @staticmethod
+    def generateWeights(structure: List[int]) -> List[List[List[float]]]:
+        return [
+            [
+                [uniform(-1, 1) for _ in range(structure[connectionLayer] + 1)]
+                for _ in range(structure[connectionLayer+1])
+            ]
+            for connectionLayer in range(len(structure) - 1)
+        ]

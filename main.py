@@ -1,18 +1,19 @@
 from network import Network
 import tkinter as tk
 from tkinter import messagebox
-import numpy as np
 
 layers = [2, 4, 5, 3, 1]
 size = 500
 steps = int(size / 20)
 window = tk.Tk()
+img = tk.PhotoImage(width=500, height=500)
 canvas = tk.Canvas(window, width=size, height=size, bg="#fff")
+canvas.create_image(0, 0, anchor="nw", image=img)
 
 
 def clearData():
     global data
-    data = np.empty((0, 3), float)
+    data = []
     canvas.delete("points")
 
 
@@ -32,31 +33,44 @@ def translate(value, leftMin, leftMax, rightMin, rightMax):
     return rightMin + (valueScaled * rightSpan)
 
 
-def f(a, b):
-    a /= steps
-    b /= steps
-    res = network.calculate([a, b])[0]
+def f(x, y):
+    x /= steps
+    y /= steps
+    res = network.calculate([x, y])[-1][0]
+    return getColor(res)
+
+def getColor(res):
     green = int(translate(max(res, 0.5), 0.5, 1, 0, 255))
     blue = int(translate(min(res, 0.5), 0.5, 0, 0, 255))
-    return f"#{255 - green - blue:02x}{int(255 - blue):02x}{int(255 - green):02x}"
+    r = 255 - green - blue
+    g = 255 - blue
+    b = 255 - green
+    return "#%X%X%X" % (r, g, b)
 
-def draw():
-    canvas.delete("all")
-    for y in range(steps):
-        for x in range(steps):
-            color = f(x, y)
-            canvas.create_rectangle(size / steps * x, size / steps * y, size / steps * x + size / steps, size / steps * y + size / steps,
-                                    fill=color, outline=color)
+
+def drawImage():
+    sampleSize = 20
+    for y in range(500//sampleSize):
+        _data = []
+        for x in range(500//sampleSize):
+            color = f(x/(500/sampleSize)*2-1, y/(500//sampleSize)*2-1)
+            for _ in range(sampleSize):
+                _data.append(color)
+        _data = [_data]
+        img.put(_data, to=(0, y*sampleSize, 500, (y+1) * sampleSize))
+
+
+def update():
+    drawImage()
     drawData()
     drawText()
     window.update_idletasks()
-    window.after(1000, draw)
 
 
 def drawText():
     canvas.delete("text")
     canvas.create_text(2, 2, anchor="nw", tags="text", text=f"Поколение: {network.generations}\n"
-                                                            f"Ошибка: {network.error}")
+                                                            f"Ошибка: {network.getError()}")
 
 
 def drawData(last=False):
@@ -65,28 +79,30 @@ def drawData(last=False):
 
     if len(data) > 0:
         if last:
-            x = data[-1][0] * size
-            y = data[-1][1] * size
-            if data[-1][-1] == 0:
+            x = (data[-1][0][0] + 1) / 2 * size
+            y = (data[-1][0][1] + 1) / 2 * size
+            if data[-1][1][-1] == -1:
                 color = "#22F"
             else:
                 color = "#2F2"
             canvas.create_oval(x - offset, y - offset, x + offset, y + offset, outline="#000", fill=color, tags="points", width=2)
         else:
-            for dataset in data * [size, size, 1]:
-                if dataset[-1] == 0:
+            canvas.delete("points")
+            for dataset in data:
+                if dataset[1][-1] == -1:
                     color = "#22F"
                 else:
                     color = "#2F2"
-                canvas.create_oval(dataset[0] - offset, dataset[1] - offset, dataset[0] + offset, dataset[1] + offset,
+                x = (dataset[0][0]+1)/2*size
+                y = (dataset[0][1]+1)/2*size
+                canvas.create_oval(x - offset, y - offset, x + offset, y + offset,
                                    outline="#000", fill=color, tags="points", width=2)
 
 
 def recreate():
     global network
-    del(network)
+    del network
     network = Network(layers)
-    draw()
 
 def leftMButton(event=None):
     global data
@@ -98,7 +114,7 @@ def leftMButton(event=None):
     else:
         x = window.winfo_pointerx() - window.winfo_x() - 193
         y = window.winfo_pointery() - window.winfo_y() - 27
-    data = np.append(data, [[x / size, y / size, 1]], axis=0)
+    data.append(([x / size * 2 - 1, y / size * 2 - 1], [1]))
     drawData(True)
 
 def leftRelease(event):
@@ -115,7 +131,7 @@ def rightMButton(event=None):
     else:
         x = window.winfo_pointerx() - window.winfo_x() - 193
         y = window.winfo_pointery() - window.winfo_y() - 27
-    data = np.append(data, [[x / size, y / size, 0]], axis=0)
+    data.append(([x / size * 2 - 1, y / size * 2 - 1], [-1]))
     drawData(True)
 
 def rightRelease(event):
@@ -142,7 +158,7 @@ def howto():
     messagebox.showinfo("Инструкция", text)
 
 
-drawButton = tk.Button(window, text="Визуализировать", command=draw)
+drawButton = tk.Button(window, text="Визуализировать", command=update)
 trainButton = tk.Button(window, text="Тренировать нейронную сеть", command=train)
 recreateButton = tk.Button(window, text="Пересоздать нейронную сеть", command=recreate)
 clearDataButton = tk.Button(window, text="Очистить входные данные", command=clearData)
@@ -156,9 +172,9 @@ aboutButton.grid(column=0, row=3, stick="NEWS")
 howtoButton.grid(column=0, row=4, stick="NEWS")
 canvas.grid(column=1, row=0, rowspan=5, columnspan=5)
 window.title("Нейронная сеть")
-draw()
 canvas.bind("<Button-1>", leftMButton)
 canvas.bind("<ButtonRelease-1>", leftRelease)
 canvas.bind("<Button-3>", rightMButton)
 canvas.bind("<ButtonRelease-3>", rightRelease)
+canvas.bind("<Button-2>", lambda event: update())
 tk.mainloop()
