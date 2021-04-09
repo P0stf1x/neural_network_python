@@ -18,11 +18,14 @@ def clearData():
 
 network = Network(layers)
 clearData()
+windowUpdated = True
 
 
 def train():
+    global windowUpdated
     network.train(data)
     drawText()
+    windowUpdated = True
 
 
 def translate(value, leftMin, leftMax, rightMin, rightMax):
@@ -41,16 +44,20 @@ def f(a, b):
     return f"#{255 - green - blue:02x}{int(255 - blue):02x}{int(255 - green):02x}"
 
 def draw():
-    canvas.delete("all")
-    for y in range(steps):
-        for x in range(steps):
-            color = f(x, y)
-            canvas.create_rectangle(size / steps * x, size / steps * y, size / steps * x + size / steps, size / steps * y + size / steps,
-                                    fill=color, outline=color)
-    drawData()
-    drawText()
-    window.update_idletasks()
-    window.after(1000, draw)
+    global windowUpdated
+    global drawUpdateID
+    if windowUpdated:
+        canvas.delete("all")
+        for y in range(steps):
+            for x in range(steps):
+                color = f(x, y)
+                canvas.create_rectangle(size / steps * x, size / steps * y, size / steps * x + size / steps, size / steps * y + size / steps,
+                                        fill=color, outline=color)
+        drawData()
+        drawText()
+        window.update_idletasks()
+        windowUpdated = False
+    drawUpdateID = window.after(50, draw)
 
 
 def drawText():
@@ -84,9 +91,10 @@ def drawData(last=False):
 
 def recreate():
     global network
+    global windowUpdated
     del(network)
     network = Network(layers)
-    draw()
+    windowUpdated = True
 
 def leftMButton(event=None):
     global data
