@@ -34,10 +34,19 @@ class Network:
         # TODO: write implementation
         pass
 
+    def getError(self, dataset):
+        return self._getError(dataset, self.weights)
 
     @staticmethod
-    def getError(data=-1):
-        return data
+    def _getError(dataset: List[Tuple[List[float], List[float]]], weights) -> float:
+        error = 0
+        if dataset:
+            for data in dataset:
+                actual = Network.calculateLayers(data[0], weights)[-1]
+                ideal = data[1]
+                error += sum((i - a)**2 for i, a in zip(ideal, actual))/len(ideal)
+            error /= len(dataset)
+        return error
 
     def calculate(self, inputs: List[float]):
         """
