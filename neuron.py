@@ -1,13 +1,12 @@
 from math import exp
 from random import uniform as random
-import numba
 
 
 class Neuron:
     def __init__(self, value=None):
         self.value = value
         self.delta = None
-        self.backNeighbors = []  # 0 - нейрон, 1 - вес с нейроном, 2 - дельта вес с нейпрерм
+        self.backNeighbors = []  # 0 - нейрон, 1 - вес, 2 - дельта вес
 
     def initNeighbors(self, backneighbors):  # Получение списка соседних слоёв
         for i in range(len(backneighbors)):

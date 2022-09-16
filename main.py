@@ -43,6 +43,7 @@ def f(a, b):
     blue = int(translate(min(res, 0.5), 0.5, 0, 0, 255))
     return f"#{255 - green - blue:02x}{int(255 - blue):02x}{int(255 - green):02x}"
 
+
 def draw():
     global windowUpdated
     global drawUpdateID
@@ -51,8 +52,14 @@ def draw():
         for y in range(steps):
             for x in range(steps):
                 color = f(x, y)
-                canvas.create_rectangle(size / steps * x, size / steps * y, size / steps * x + size / steps, size / steps * y + size / steps,
-                                        fill=color, outline=color)
+                canvas.create_rectangle(
+                    size / steps * x,
+                    size / steps * y,
+                    size / steps * x + size / steps,
+                    size / steps * y + size / steps,
+                    fill=color,
+                    outline=color,
+                )
         drawData()
         drawText()
         window.update_idletasks()
@@ -62,8 +69,13 @@ def draw():
 
 def drawText():
     canvas.delete("text")
-    canvas.create_text(2, 2, anchor="nw", tags="text", text=f"Поколение: {network.generations}\n"
-                                                            f"Ошибка: {network.error}")
+    canvas.create_text(
+        2,
+        2,
+        anchor="nw",
+        tags="text",
+        text=f"Поколение: {network.generations}\n" f"Ошибка: {network.error}",
+    )
 
 
 def drawData(last=False):
@@ -78,23 +90,41 @@ def drawData(last=False):
                 color = "#22F"
             else:
                 color = "#2F2"
-            canvas.create_oval(x - offset, y - offset, x + offset, y + offset, outline="#000", fill=color, tags="points", width=2)
+            canvas.create_oval(
+                x - offset,
+                y - offset,
+                x + offset,
+                y + offset,
+                outline="#000",
+                fill=color,
+                tags="points",
+                width=2,
+            )
         else:
             for dataset in data * [size, size, 1]:
                 if dataset[-1] == 0:
                     color = "#22F"
                 else:
                     color = "#2F2"
-                canvas.create_oval(dataset[0] - offset, dataset[1] - offset, dataset[0] + offset, dataset[1] + offset,
-                                   outline="#000", fill=color, tags="points", width=2)
+                canvas.create_oval(
+                    dataset[0] - offset,
+                    dataset[1] - offset,
+                    dataset[0] + offset,
+                    dataset[1] + offset,
+                    outline="#000",
+                    fill=color,
+                    tags="points",
+                    width=2,
+                )
 
 
 def recreate():
     global network
     global windowUpdated
-    del(network)
+    del network
     network = Network(layers)
     windowUpdated = True
+
 
 def leftMButton(event=None):
     global data
@@ -109,9 +139,11 @@ def leftMButton(event=None):
     data = np.append(data, [[x / size, y / size, 1]], axis=0)
     drawData(True)
 
+
 def leftRelease(event):
     global leftHoldID
     window.after_cancel(leftHoldID)
+
 
 def rightMButton(event=None):
     global data
@@ -126,9 +158,11 @@ def rightMButton(event=None):
     data = np.append(data, [[x / size, y / size, 0]], axis=0)
     drawData(True)
 
+
 def rightRelease(event):
     global rightHoldID
     window.after_cancel(rightHoldID)
+
 
 def about():
     try:
@@ -140,13 +174,15 @@ def about():
 
 
 def howto():
-    text = "Для начала нужно добавить входные данные.\n" \
-           "Левая кнопка мыши создаёт зелёную точку\n" \
-           "Правая кнопка мыши создаёт синюю точку\n\n" \
-           "Когда необходимые точки заданы - следует нажать на кнопку " \
-           "\"Тренировать нейронную сеть\". Каждое нажатие симулирует " \
-           "100 поколений обучения нейронной сети.\n\nДля удаления входных " \
-           "данных, и создания новой сети есть соответствующие кнопки"
+    text = (
+        "Для начала нужно добавить входные данные.\n"
+        "Левая кнопка мыши создаёт зелёную точку\n"
+        "Правая кнопка мыши создаёт синюю точку\n\n"
+        "Когда необходимые точки заданы - следует нажать на кнопку "
+        '"Тренировать нейронную сеть". Каждое нажатие симулирует '
+        "100 поколений обучения нейронной сети.\n\nДля удаления входных "
+        "данных, и создания новой сети есть соответствующие кнопки"
+    )
     messagebox.showinfo("Инструкция", text)
 
 

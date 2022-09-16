@@ -1,7 +1,5 @@
 from neuron import Neuron
 import numpy as np
-import numba
-from numba import cuda
 
 
 class Network:
@@ -45,24 +43,31 @@ class Network:
         error = 0
         if len(sets) > 0:
             for i, dataset in enumerate(sets):
-                self.calculate(dataset[:len(self.layers[0])])
+                self.calculate(dataset[: len(self.layers[0])])
                 for j in range(len(self.getValues())):
-                    error += (dataset[:np.negative(len(self.layers[0])):-1][j] - self.getValues()[j]) ** 2
+                    error += (
+                        dataset[: np.negative(len(self.layers[0])) : -1][j]
+                        - self.getValues()[j]
+                    ) ** 2
             error /= len(sets)
         return error
 
     def iteration(self, dataset):
         # Считаем дельту для каждого нейрона
-        self.calculate(dataset[:len(self.layers[0])])
+        self.calculate(dataset[: len(self.layers[0])])
         for i, neuron in enumerate(self.layers[-1]):
-            pr = ((1 - neuron.value) * neuron.value)  # Производная функции активации нейрона (сигмоида)
-            neuron.delta = (dataset[:np.negative(len(self.layers[0])):-1][i] - neuron.value) * pr
+            pr = (
+                1 - neuron.value
+            ) * neuron.value  # Производная функции активации нейрона (сигмоида)
+            neuron.delta = (
+                dataset[: np.negative(len(self.layers[0])) : -1][i] - neuron.value
+            ) * pr
         for layerid in range(len(self.layers) - 2, 0, -1):
             for neuronid, neuron in enumerate(self.layers[layerid]):
                 deltaSum = 0
                 for nextNeuron in self.layers[layerid + 1]:
                     deltaSum += nextNeuron.backNeighbors[neuronid][1] * nextNeuron.delta
-                pr = ((1 - neuron.value) * neuron.value)
+                pr = (1 - neuron.value) * neuron.value
                 neuron.delta = pr * deltaSum
 
         # Обновляем веса нейронов
